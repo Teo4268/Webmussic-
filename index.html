@@ -21,33 +21,39 @@
 
   <!-- 🔥 Gọi API lấy danh sách nhạc -->
   <script>
-    const playlist = document.getElementById('playlist');
+  <script>
+  const API_URL = "https://your-page.pages.dev/songs.json";
+  const playlist = document.getElementById('playlist');
 
-    fetch('https://json-e0t.pages.dev/song.json')
-      .then(res => res.json())
-      .then(songs => {
-        songs.forEach(song => {
-          const card = document.createElement('div');
-          card.className = 'song-card';
-          card.innerHTML = `
-            <div class="flex-1">
-              <h2 class="${song.class}">${song.title}</h2>
-              <div class="progress-bar"><div class="progress"></div></div>
-              <span class="time">00:00 / 00:00</span>
-            </div>
-            <button class="play-btn"><i class="fas fa-play"></i></button>
-            <audio>
-              <source src="${song.url}" type="audio/mpeg">
-            </audio>
-          `;
-          playlist.appendChild(card);
-        });
-
-        // Load script xử lý play/pause sau khi render xong
-        const script = document.createElement('script');
-        script.src = 'script.js';
-        document.body.appendChild(script);
+  fetch(API_URL)
+    .then(res => res.json())
+    .then(songs => {
+      songs.forEach(song => {
+        const card = document.createElement('div');
+        card.className = 'song-card';
+        card.innerHTML = `
+          <div class="flex-1">
+            <h2 class="${song.class}">${song.title}</h2>
+            <div class="progress-bar"><div class="progress"></div></div>
+            <span class="time">00:00 / 00:00</span>
+          </div>
+          <button class="play-btn"><i class="fas fa-play"></i></button>
+          <audio preload="metadata">
+            <source src="${song.url}" type="audio/mpeg">
+          </audio>
+        `;
+        playlist.appendChild(card);
       });
+
+      // Chỉ chạy script khi DOM đã có .song-card
+      const script = document.createElement('script');
+      script.src = 'script.js';
+      document.body.appendChild(script);
+    })
+    .catch(err => {
+      console.error("Không load được danh sách nhạc:", err);
+      playlist.innerHTML = "<p class='text-red-500'>Không tải được danh sách nhạc.</p>";
+    });
   </script>
   <style>
     .rainbow-text {
