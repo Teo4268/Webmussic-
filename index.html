@@ -20,8 +20,8 @@
   </div>
 
   <!-- 🔥 Gọi API lấy danh sách nhạc -->
-  <script>
-  <script>
+  <!-- 🔥 Gọi API lấy danh sách nhạc -->
+<script>
   const API_URL = "https://json-e0t.pages.dev/song.json";
   const playlist = document.getElementById('playlist');
 
@@ -45,7 +45,7 @@
         playlist.appendChild(card);
       });
 
-      // Chỉ chạy script khi DOM đã có .song-card
+      // ✅ Chạy script sau khi danh sách đã render xong
       const script = document.createElement('script');
       script.src = 'script.js';
       document.body.appendChild(script);
@@ -54,7 +54,7 @@
       console.error("Không load được danh sách nhạc:", err);
       playlist.innerHTML = "<p class='text-red-500'>Không tải được danh sách nhạc.</p>";
     });
-  </script>
+</script>
   <style>
     .rainbow-text {
       font-size: 20px;
