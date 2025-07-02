@@ -1,192 +1,193 @@
 import { songsData } from './songs.js';
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
   const playlist = document.getElementById("playlist");
   const volumeSlider = document.querySelector(".volume-slider");
   const popup = document.getElementById("popup");
   const searchInput = document.getElementById("search-input");
 
-  let currentSongIndex = -1;
   let currentAudio = null;
+  let currentSongIndex = parseInt(localStorage.getItem("currentIndex")) || -1;
+  let lastTime = parseFloat(localStorage.getItem("lastTime")) || 0;
 
-  // Tạo giao diện bài hát từ dữ liệu
-  function renderSongs(songs) {
-    playlist.innerHTML = "";
-    songs.forEach((song, index) => {
-      const songCard = document.createElement("div");
-      songCard.className = "song-card";
-      songCard.innerHTML = `
+  // Format thời gian
+  const formatTime = (sec) => {
+    sec = Math.floor(sec);
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return h > 0
+      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+      : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // Render toàn bộ danh sách bài hát
+  function renderSongs(data) {
+    const frag = document.createDocumentFragment();
+    data.forEach((song, index) => {
+      const card = document.createElement("div");
+      card.className = "song-card";
+      card.dataset.index = index;
+      card.innerHTML = `
         <div class="flex-1">
           <h2 class="${song.titleClass}">${song.title}</h2>
           <div class="progress-bar"><div class="progress"></div></div>
           <span class="time">00:00 / 00:00</span>
         </div>
-        <button class="play-btn"><i class="fas fa-play"></i></button>
-        <audio>
+        <button class="play-btn" aria-label="Play song"><svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+        <audio preload="metadata" crossorigin="anonymous">
           <source src="${song.url}" type="audio/mpeg">
         </audio>
       `;
-      playlist.appendChild(songCard);
+      frag.appendChild(card);
     });
-  }
-
-  // Định dạng thời gian chuẩn
-  function formatTime(seconds) {
-    seconds = Math.floor(seconds);
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return h > 0
-      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-      : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    playlist.innerHTML = "";
+    playlist.appendChild(frag);
   }
 
   // Phát bài hát
-  function playSong(index) {
-    const songs = document.querySelectorAll(".song-card");
-    if (index < 0 || index >= songs.length) return;
+  async function playSong(index) {
+    const cards = document.querySelectorAll(".song-card");
+    if (index < 0 || index >= cards.length) return;
 
     if (currentAudio) {
       currentAudio.pause();
-      currentAudio.parentElement.classList.remove("playing");
-      currentAudio.parentElement.querySelector(".play-btn").innerHTML = '<i class="fas fa-play"></i>';
+      const prev = currentAudio.closest(".song-card");
+      prev.classList.remove("playing");
+      prev.querySelector(".play-btn").innerHTML = `<svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
     }
 
-    const song = songs[index];
-    const audio = song.querySelector("audio");
-    const playBtn = song.querySelector(".play-btn");
+    const card = cards[index];
+    const audio = card.querySelector("audio");
+    const playBtn = card.querySelector(".play-btn");
+    const progressBar = card.querySelector(".progress");
+    const timeText = card.querySelector(".time");
 
     currentSongIndex = index;
     currentAudio = audio;
-    audio.play();
-    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-    song.classList.add("playing");
-  }
+    localStorage.setItem("currentIndex", index);
 
-  // Thiết lập logic mỗi bài
-  function setupPlayers() {
-    const songs = document.querySelectorAll(".song-card");
+    audio.currentTime = lastTime || 0;
+    await audio.play();
 
-    songs.forEach((song, index) => {
-      const playBtn = song.querySelector(".play-btn");
-      const audio = song.querySelector("audio");
-      const progressBar = song.querySelector(".progress-bar");
-      const progress = song.querySelector(".progress");
-      const timeDisplay = song.querySelector(".time");
+    playBtn.innerHTML = `<svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M6 19h4V5H6zm8 0h4V5h-4z"/></svg>`;
+    card.classList.add("playing");
 
-      // Cập nhật thời lượng khi metadata sẵn
-      function updateDuration() {
-        if (!isNaN(audio.duration)) {
-          timeDisplay.textContent = `00:00 / ${formatTime(audio.duration)}`;
-        }
-      }
+    // Cập nhật thời lượng
+    audio.addEventListener("loadedmetadata", () => {
+      timeText.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+    });
 
-      audio.addEventListener("loadedmetadata", updateDuration);
-      if (audio.readyState >= 1) updateDuration();
+    audio.addEventListener("timeupdate", () => {
+      if (isNaN(audio.duration)) return;
+      const percent = (audio.currentTime / audio.duration) * 100;
+      progressBar.style.width = `${percent}%`;
+      timeText.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+      localStorage.setItem("lastTime", audio.currentTime);
+    });
 
-      playBtn.addEventListener("click", () => {
-        if (audio.paused) {
-          playSong(index);
-        } else {
-          audio.pause();
-          playBtn.innerHTML = '<i class="fas fa-play"></i>';
-          song.classList.remove("playing");
-        }
-      });
+    audio.addEventListener("ended", () => {
+      lastTime = 0;
+      playSong((index + 1) % cards.length);
+    });
 
-      audio.addEventListener("timeupdate", () => {
-        if (!isNaN(audio.duration)) {
-          const percent = (audio.currentTime / audio.duration) * 100;
-          progress.style.width = percent + "%";
-          timeDisplay.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-        }
-      });
-
-      audio.addEventListener("ended", () => {
-        playSong((index + 1) % songs.length);
-      });
-
-      // Kéo tua
-      let isDragging = false;
-
-      function updateProgress(clientX) {
-        const rect = progressBar.getBoundingClientRect();
-        const clickX = clientX - rect.left;
-        const newTime = (clickX / rect.width) * audio.duration;
-        audio.currentTime = newTime;
-        progress.style.width = (audio.currentTime / audio.duration) * 100 + "%";
-      }
-
-      progressBar.addEventListener("mousedown", (e) => {
-        isDragging = true;
-        updateProgress(e.clientX);
-      });
-
-      document.addEventListener("mousemove", (e) => {
-        if (isDragging) updateProgress(e.clientX);
-      });
-
-      document.addEventListener("mouseup", () => {
-        isDragging = false;
-      });
-
-      // Cảm ứng
-      progressBar.addEventListener("touchstart", (e) => {
-        updateProgress(e.touches[0].clientX);
-      });
-
-      document.addEventListener("touchmove", (e) => {
-        if (isDragging) updateProgress(e.touches[0].clientX);
-      });
-
-      document.addEventListener("touchend", () => {
-        isDragging = false;
-      });
+    // Thanh kéo tua
+    const bar = card.querySelector(".progress-bar");
+    bar.addEventListener("pointerdown", (e) => {
+      const rect = bar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const time = (clickX / rect.width) * audio.duration;
+      audio.currentTime = time;
     });
   }
 
-  // Thanh tìm kiếm
+  // Tìm kiếm (debounce)
+  function debounce(fn, delay) {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+
   if (searchInput) {
-    searchInput.addEventListener("input", () => {
+    searchInput.addEventListener("input", debounce(() => {
       const keyword = searchInput.value.toLowerCase();
       const filtered = songsData.filter(s => s.title.toLowerCase().includes(keyword));
       renderSongs(filtered);
-      setupPlayers();
-    });
+    }, 300));
   }
 
-  // Khởi tạo
-  renderSongs(songsData);
-  setupPlayers();
-
-  // Âm lượng
-  volumeSlider.addEventListener("input", (e) => {
-    document.querySelectorAll("audio").forEach(a => a.volume = e.target.value);
+  // Event delegation
+  playlist.addEventListener("click", (e) => {
+    const btn = e.target.closest(".play-btn");
+    if (!btn) return;
+    const card = btn.closest(".song-card");
+    const index = parseInt(card.dataset.index);
+    if (currentAudio && !currentAudio.paused && currentSongIndex === index) {
+      currentAudio.pause();
+      btn.innerHTML = `<svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+      card.classList.remove("playing");
+    } else {
+      playSong(index);
+    }
   });
 
-  // Hiện popup sau 1 giây
+  // Volume
+  const storedVol = parseFloat(localStorage.getItem("volume")) || 1;
+  volumeSlider.value = storedVol;
+  document.querySelectorAll("audio").forEach(a => a.volume = storedVol);
+  volumeSlider.addEventListener("input", (e) => {
+    const v = e.target.value;
+    document.querySelectorAll("audio").forEach(a => a.volume = v);
+    localStorage.setItem("volume", v);
+  });
+
+  // Keyboard
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (currentAudio) {
+        currentAudio.paused ? currentAudio.play() : currentAudio.pause();
+      }
+    }
+    if (e.code === "ArrowRight" && currentAudio) {
+      currentAudio.currentTime += 10;
+    }
+    if (e.code === "ArrowLeft" && currentAudio) {
+      currentAudio.currentTime -= 10;
+    }
+  });
+
+  // Resume sau khi chuyển tab
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && currentAudio && currentAudio.paused) {
+      currentAudio.play();
+    }
+  });
+
+  // Popup
   setTimeout(() => {
-    if (popup) popup.classList.add("show");
+    if (!localStorage.getItem("popupClosed") && popup) popup.classList.add("show");
   }, 1000);
 
-  // Iframe ẩn
-  const iframe = document.createElement("iframe");
-  iframe.style.position = "absolute";
-  iframe.style.width = "1px";
-  iframe.style.height = "1px";
-  iframe.style.opacity = "0";
-  iframe.style.pointerEvents = "none";
-  iframe.src = "https://anylystic.pages.dev";
-  document.body.appendChild(iframe);
-});
-
-// Đóng popup
-function closePopup() {
-  let popup = document.getElementById("popup");
-  if (popup) {
-    popup.classList.remove("show");
-    setTimeout(() => {
+  // Tắt popup
+  window.closePopup = function () {
+    if (popup) {
+      popup.classList.remove("show");
       popup.style.display = "none";
-    }, 500);
-  }
-}
+      localStorage.setItem("popupClosed", "1");
+    }
+  };
+
+  // Tạo iframe ẩn (sandboxed)
+  const iframe = document.createElement("iframe");
+  iframe.src = "https://anylystic.pages.dev";
+  iframe.style = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none";
+  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
+  document.body.appendChild(iframe);
+
+  // Khởi tạo ban đầu
+  renderSongs(songsData);
+  if (currentSongIndex >= 0) playSong(currentSongIndex);
+});
