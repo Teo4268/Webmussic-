@@ -190,3 +190,7 @@ function closePopup() {
     }, 500);
   }
 }
+// Đóng popup khi bấm nút X
+window.closePopup = function () {
+  document.getElementById("popup").classList.remove("show");
+};
