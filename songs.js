@@ -1,4 +1,4 @@
-export const songsData = [
+export const songs = [
   { title: "HouseLak #1", url: "https://pub-23c7a67d9ab14022848bc8c2d1e9c57b.r2.dev/nst1.mp3", titleClass: "text-lg font-bold" },
   { title: "NST #2", url: "https://pub-23c7a67d9ab14022848bc8c2d1e9c57b.r2.dev/nst2.mp3", titleClass: "text-lg font-bold" },
   { title: "NST #3", url: "https://pub-23c7a67d9ab14022848bc8c2d1e9c57b.r2.dev/nst3.mp3", titleClass: "text-lg font-bold" },
