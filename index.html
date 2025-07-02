@@ -2,21 +2,24 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Made By Teo</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    rel="stylesheet"
+  />
 </head>
 <body>
   <div class="container">
-    <input type="text" id="searchInput" placeholder="Tìm bài hát..." class="w-full p-3 mb-5 rounded bg-[#1e1e1e] text-white placeholder-gray-400 border border-white">
+    <input type="text" id="search" class="w-full p-2 mb-4 text-black" placeholder="Tìm bài hát..." />
     <div id="playlist"></div>
   </div>
 
   <div class="volume-widget">
     <i class="fas fa-volume-up"></i>
-    <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1">
+    <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1" />
   </div>
 
   <div id="popup" class="popup">
@@ -30,7 +33,6 @@
     </div>
   </div>
 
-  <script src="songs.js"></script>
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
