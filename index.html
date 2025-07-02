@@ -1,80 +1,28 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Made By Teo</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-
   <div class="container">
-    <div id="playlist">Đang tải danh sách nhạc...</div>
+    <input type="text" id="search" class="w-full p-2 mb-4 text-black" placeholder="Tìm bài hát...">
+    <div id="playlist"></div>
   </div>
 
   <div class="volume-widget">
     <i class="fas fa-volume-up"></i>
-    <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1" />
+    <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="1">
   </div>
 
-  <script>
-    const API_URL = "https://json-e0t.pages.dev/song.json"; // 👉 Thay đúng link JSON
-
-    const playlist = document.getElementById('playlist');
-
-    fetch(API_URL)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(songs => {
-        playlist.innerHTML = ''; // Xóa dòng "Đang tải..."
-        songs.forEach(song => {
-          const card = document.createElement('div');
-          card.className = 'song-card';
-          card.innerHTML = `
-            <div class="flex-1">
-              <h2 class="${song.class}">${song.title}</h2>
-              <div class="progress-bar"><div class="progress"></div></div>
-              <span class="time">00:00 / 00:00</span>
-            </div>
-            <button class="play-btn"><i class="fas fa-play"></i></button>
-            <audio preload="metadata">
-              <source src="${song.url}" type="audio/mpeg">
-            </audio>
-          `;
-          playlist.appendChild(card);
-        });
-
-        // Sau khi tạo xong .song-card thì mới load script chính
-        const script = document.createElement('script');
-        script.src = 'script.js';
-        document.body.appendChild(script);
-      })
-      .catch(err => {
-        console.error("Không load được danh sách nhạc:", err);
-        playlist.innerHTML = "<p class='text-red-500'>Không tải được danh sách nhạc.</p>";
-      });
-  </script>
-
-  <style>
-    .rainbow-text {
-      font-size: 20px;
-      font-weight: bold;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to right,green, blue, indigo, violet);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-  </style>
-
-  <!-- Popup -->
   <div id="popup" class="popup">
     <div class="popup-content">
-      <p>Web Đang Trong GIAI ĐOẠN PHÁT TRIỂN</p>
-      <h2>*Update Log</h2>
+      <p> Web Đang Trong Giai ĐOẠN PHÁT TRIỂN </p>
+      <h2> *Update Log </h2>
       <div class="popup-log">
         <p>- nghĩ hè r ae chờ ik</p>
       </div>
@@ -82,5 +30,6 @@
     </div>
   </div>
 
+  <script type="module" src="script.js"></script>
 </body>
 </html>
