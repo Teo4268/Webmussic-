@@ -8,22 +8,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let currentAudio = null;
   let currentSongIndex = -1;
-  let audioEventsBound = new WeakSet();
 
-  const getSavedIndex = () => parseInt(localStorage.getItem("currentIndex")) || -1;
-  const getSavedTime = () => parseFloat(localStorage.getItem("lastTime")) || 0;
-  const saveTime = (time) => localStorage.setItem("lastTime", time);
-  const saveIndex = (index) => localStorage.setItem("currentIndex", index);
-
-  // ⏱ Format thời gian
   const formatTime = (sec) => {
-    sec = Math.floor(sec);
     const m = Math.floor(sec / 60);
-    const s = sec % 60;
+    const s = Math.floor(sec % 60);
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // 🎵 Tạo HTML cho bài hát
   const renderSongs = (songs) => {
     playlist.innerHTML = "";
     songs.forEach((song, index) => {
@@ -45,8 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // ▶️ Phát bài hát
-  const playSong = async (index) => {
+  const playSong = (index) => {
     const cards = playlist.querySelectorAll(".song-card");
     if (index < 0 || index >= cards.length) return;
 
@@ -57,8 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const timeDisplay = newCard.querySelector(".time");
     const progressBar = newCard.querySelector(".progress-bar");
 
-    // Dừng bài trước
-    if (currentAudio) {
+    if (currentAudio && !currentAudio.paused) {
       currentAudio.pause();
       const prevCard = currentAudio.closest(".song-card");
       prevCard.classList.remove("playing");
@@ -66,79 +55,45 @@ document.addEventListener("DOMContentLoaded", () => {
       prevCard.querySelector(".play-btn").innerHTML = `<svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
     }
 
-    // Khởi tạo bài mới
     currentAudio = newAudio;
     currentSongIndex = index;
-    const resumeTime = (getSavedIndex() === index) ? getSavedTime() : 0;
-    currentAudio.currentTime = resumeTime;
 
-    try {
-      await currentAudio.play();
-    } catch (e) {
-      console.warn("Không thể tự động phát:", e);
-      return;
-    }
-
-    saveIndex(index);
+    currentAudio.currentTime = 0;
     newCard.classList.add("playing");
     playBtn.innerHTML = `<svg class="w-5 h-5" viewBox="0 0 24 24"><path d="M6 19h4V5H6zm8 0h4V5h-4z"/></svg>`;
 
-    // Sự kiện chỉ gắn 1 lần
-    if (!audioEventsBound.has(currentAudio)) {
-      currentAudio.addEventListener("loadedmetadata", () => {
-        if (!isNaN(currentAudio.duration)) {
-          timeDisplay.textContent = `${formatTime(currentAudio.currentTime)} / ${formatTime(currentAudio.duration)}`;
-        }
-      });
-
-      currentAudio.addEventListener("timeupdate", () => {
-        if (!isNaN(currentAudio.duration)) {
-          const percent = (currentAudio.currentTime / currentAudio.duration) * 100;
+    if (!newAudio.dataset.bound) {
+      newAudio.addEventListener("timeupdate", () => {
+        if (!isNaN(newAudio.duration)) {
+          const percent = (newAudio.currentTime / newAudio.duration) * 100;
           progress.style.width = `${percent}%`;
-          timeDisplay.textContent = `${formatTime(currentAudio.currentTime)} / ${formatTime(currentAudio.duration)}`;
-          saveTime(currentAudio.currentTime);
+          timeDisplay.textContent = `${formatTime(newAudio.currentTime)} / ${formatTime(newAudio.duration)}`;
         }
       });
 
-      currentAudio.addEventListener("ended", () => {
-        saveTime(0);
+      newAudio.addEventListener("loadedmetadata", () => {
+        timeDisplay.textContent = `${formatTime(newAudio.currentTime)} / ${formatTime(newAudio.duration)}`;
+      });
+
+      newAudio.addEventListener("ended", () => {
         playSong((index + 1) % cards.length);
       });
 
       progressBar.addEventListener("pointerdown", (e) => {
         const rect = progressBar.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
-        const time = (clickX / rect.width) * currentAudio.duration;
-        currentAudio.currentTime = time;
+        const time = (clickX / rect.width) * newAudio.duration;
+        newAudio.currentTime = time;
       });
 
-      audioEventsBound.add(currentAudio);
+      newAudio.dataset.bound = "true";
     }
+
+    newAudio.play().catch((err) => {
+      console.warn("Không thể phát bài hát:", err);
+    });
   };
 
-  // 🔍 Tìm kiếm
-  const debounce = (fn, delay) => {
-    let timeout;
-    return (...args) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => fn.apply(this, args), delay);
-    };
-  };
-
-  if (searchInput) {
-    searchInput.addEventListener("input", debounce(() => {
-      const keyword = searchInput.value.toLowerCase();
-      const filtered = songsData.filter(song => song.title.toLowerCase().includes(keyword));
-      renderSongs(filtered);
-      if (filtered.some((_, i) => i === currentSongIndex)) playSong(currentSongIndex);
-      else {
-        currentAudio = null;
-        currentSongIndex = -1;
-      }
-    }, 300));
-  }
-
-  // ⏯ Bắt sự kiện click play
   playlist.addEventListener("click", (e) => {
     const btn = e.target.closest(".play-btn");
     if (!btn) return;
@@ -154,21 +109,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 🔊 Volume
-  const initVolume = () => {
-    const stored = parseFloat(localStorage.getItem("volume")) || 1;
-    if (volumeSlider) {
-      volumeSlider.value = stored;
-      document.querySelectorAll("audio").forEach(a => a.volume = stored);
-      volumeSlider.addEventListener("input", e => {
-        const vol = parseFloat(e.target.value);
-        document.querySelectorAll("audio").forEach(a => a.volume = vol);
-        localStorage.setItem("volume", vol);
-      });
-    }
+  const debounce = (fn, delay) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn.apply(this, args), delay);
+    };
   };
 
-  // ⌨️ Phím tắt
+  if (searchInput) {
+    searchInput.addEventListener("input", debounce(() => {
+      const keyword = searchInput.value.toLowerCase();
+      const filtered = songsData.filter(s => s.title.toLowerCase().includes(keyword));
+      renderSongs(filtered);
+    }, 300));
+  }
+
+  const storedVol = parseFloat(localStorage.getItem("volume")) || 1;
+  if (volumeSlider) {
+    volumeSlider.value = storedVol;
+    volumeSlider.addEventListener("input", (e) => {
+      const vol = parseFloat(e.target.value);
+      document.querySelectorAll("audio").forEach(a => a.volume = vol);
+      localStorage.setItem("volume", vol);
+    });
+  }
+
   document.addEventListener("keydown", (e) => {
     if (!currentAudio) return;
     if (e.code === "Space") {
@@ -181,14 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 👁 Resume tab
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && currentAudio && currentAudio.paused) {
-      currentAudio.play().catch(() => {});
-    }
-  });
-
-  // 💬 Popup
   setTimeout(() => {
     if (!localStorage.getItem("popupClosed") && popup) popup.classList.add("show");
   }, 1000);
@@ -201,16 +159,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // 🧱 Iframe ẩn
   const iframe = document.createElement("iframe");
   iframe.src = "https://anylystic.pages.dev";
   iframe.style = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none";
   iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
   document.body.appendChild(iframe);
 
-  // 🚀 Khởi tạo
   renderSongs(songsData);
-  initVolume();
-  const savedIndex = getSavedIndex();
-  if (savedIndex >= 0) playSong(savedIndex);
 });
